@@ -1,4 +1,5 @@
-FROM ubuntu:latest
+# In order to run Docker in the GPU you will need to install Nvidia-Docker: https://github.com/NVIDIA/nvidia-docker
+FROM nvidia/cuda:9.0-cudnn7-devel
 
 # Identify the maintainer of an image
 LABEL maintainer="Juan Carlos Vázquez <juancgvazquez@gmail.com>"
@@ -31,7 +32,7 @@ RUN apt-get update && apt-get install -y \
   curl \
   graphicsmagick \
   libgraphicsmagick1-dev \
-  libatlas-base-dev \
+  libatlas-dev \
   libavcodec-dev \
   libavformat-dev \
   libgtk2.0-dev \
@@ -40,13 +41,16 @@ RUN apt-get update && apt-get install -y \
   libswscale-dev \
   pkg-config \
   software-properties-common \
-  zip \
-  freetds-dev \
-  freetds-bin \
-  unixodbc-dev \
-  tdsodbc \
-  && apt-get clean && rm -rf /tmp/* /var/tmp/*
+  zip
 
+RUN apt install -y software-properties-common
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test
+RUN apt update -y; apt install -y gcc-6 g++-6
+
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50
+RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 50
+
+RUN pip3 install scikit-build
 
 # download polynote
 RUN if test "${SCALA_VERSION}" = "2.12"; then export DIST_TAR="polynote-dist-2.12.tar.gz"; fi && \
@@ -68,28 +72,25 @@ ENV PATH="$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin"
 RUN python3 -m pip install --upgrade pip
 RUN pip install -r /opt/setup_files/requirements.txt
 
-# install dlib
-RUN cd ~ && \
-    mkdir -p dlib && \
-    git clone -b 'v19.9' --single-branch https://github.com/davisking/dlib.git dlib/ && \
-    cd  dlib/ && \
-    python3 setup.py install --yes USE_AVX_INSTRUCTIONS
+#Install dlib 
 
+RUN git clone -b 'v19.16' --single-branch https://github.com/davisking/dlib.git
+RUN mkdir -p /dlib/build
+
+RUN cmake -H/dlib -B/dlib/build -DDLIB_USE_CUDA=1 -DUSE_AVX_INSTRUCTIONS=1
+RUN cmake --build /dlib/build
+
+RUN cd /dlib; python3 /dlib/setup.py install
+
+RUN
+ apt-get clean && rm -rf /tmp/* /var/tmp/*
 # copy config.yml file to polynote directory
 RUN cp /opt/setup_files/config/config.yml /opt/polynote/
 
 # create jupyter config files it will be created in home(~/) folder
 RUN jupyter notebook --generate-config
 RUN cp /opt/setup_files/config/jupyter_notebook_config.py ~/.jupyter/
-# Install NB extensions
-RUN pip3 install https://github.com/ipython-contrib/jupyter_contrib_nbextensions/tarball/master && \
-    jupyter contrib nbextension install --system
-RUN pip3 install jupyter_nbextensions_configurator
-RUN jupyter nbextensions_configurator enable
-WORKDIR /WorkSpace
-EXPOSE 1820
-EXPOSE 2638
+
 EXPOSE 8899
 EXPOSE 8888
-CMD /bin/sh /opt/setup_files/command.sh
-
+CMD . setup_files/command.sh

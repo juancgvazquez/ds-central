@@ -1,0 +1,16 @@
+version: '2.3'
+
+services:
+  ds-central:
+    image: ds-central
+    container_name: ds-central
+    working_dir: /WorkSpace
+    build:
+      context: .
+      #Descomentar la siguiente linea para usar GPU (necesita tener el Nvidia-Docker)
+#      dockerfile: Dockerfile.gpu 
+    command: /bin/sh /opt/setup_files/command.sh
+    volumes:
+      - ./WorkSpace:/WorkSpace
+    #Descomentar la siguiente linea para usar GPU (necesita tener el Nvidia-Docker)
+#    runtime: nvidia

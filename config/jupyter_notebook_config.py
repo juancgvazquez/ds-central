@@ -12,4 +12,5 @@
 #       Enter password:
 #       Verify password:
 #       Out[2]: 'sha1:3dfb9c306198:6a917376957053aefb43ef79e5c8b405d2eb7669'
-c.NotebookApp.password = u'sha1:e10b54ea7f07:dc33e226e4afc2e0e0aa1d9700864b261753bba4'
+c.NotebookApp.password = u'sha1:38bbfc81a7fc:c9ccdfbe07194fbcff7ba987d1e5e4903e88c092'
+c.NotebookApp.notebook_dir = '/WorkSpace'
