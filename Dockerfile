@@ -4,10 +4,11 @@ FROM ubuntu:latest
 LABEL maintainer="Juan Carlos Vázquez <juancgvazquez@gmail.com>"
 
 # copy files from local to container
+USER root
 COPY . /opt/setup_files
 WORKDIR /opt
 
-# mention version numbers
+## mention version numbers
 ARG POLYNOTE_VERSION="0.2.12"
 ARG SCALA_VERSION="2.11"
 ARG DIST_TAR="polynote-dist.tar.gz"
@@ -48,7 +49,7 @@ RUN apt-get update && apt-get install -y \
   && apt-get clean && rm -rf /tmp/* /var/tmp/*
 
 
-# download polynote
+## download polynote
 RUN if test "${SCALA_VERSION}" = "2.12"; then export DIST_TAR="polynote-dist-2.12.tar.gz"; fi && \
   wget -q https://github.com/polynote/polynote/releases/download/$POLYNOTE_VERSION/$DIST_TAR && \
   tar xfzp $DIST_TAR && \
@@ -68,7 +69,6 @@ ENV PATH="$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin"
 RUN python3 -m pip install --upgrade pip
 RUN pip install -r /opt/setup_files/requirements.txt
 
-# install dlib
 RUN cd ~ && \
     mkdir -p dlib && \
     git clone -b 'v19.9' --single-branch https://github.com/davisking/dlib.git dlib/ && \
@@ -80,12 +80,33 @@ RUN cp /opt/setup_files/config/config.yml /opt/polynote/
 
 # create jupyter config files it will be created in home(~/) folder
 RUN jupyter notebook --generate-config
-RUN cp /opt/setup_files/config/jupyter_notebook_config.py ~/.jupyter/
+RUN mkdir /etc/jupyter
+RUN mkdir /.local
+RUN cp /opt/setup_files/config/jupyter_notebook_config.py /etc/jupyter/
 # Install NB extensions
 RUN pip3 install https://github.com/ipython-contrib/jupyter_contrib_nbextensions/tarball/master && \
     jupyter contrib nbextension install --system
 RUN pip3 install jupyter_nbextensions_configurator
 RUN jupyter nbextensions_configurator enable
+RUN mkdir /WorkSpace
+RUN mkdir /home/jupyteruser
+RUN useradd --uid 1001 --gid 0 -m --home-dir /home/jupyteruser jupyteruser
+
+RUN chown -R 1001 /opt/setup_files && \
+    chgrp -R 0 /opt/setup_files && \
+    chmod -R g+w /opt/setup_files && \
+    chown -R 1001 /home/jupyteruser && \
+    chgrp -R 0 /home/jupyteruser && \
+    chmod -R g+w /home/jupyteruser && \
+    chown -R 1001 /WorkSpace && \
+    chgrp -R 0 /WorkSpace && \
+    chmod -R g+w /WorkSpace && \
+    chown -R 1001 /usr && \
+    chgrp -R 0 /usr && \
+    chmod -R g+w /usr      
+
+USER 1001
+
 WORKDIR /WorkSpace
 EXPOSE 1820
 EXPOSE 2638
